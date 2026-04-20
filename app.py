@@ -1,38 +1,62 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
+from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "library_secret_key")
+app.secret_key = "library_secret_key"
+DB_NAME = "library.db"
 
-DB = "library.db"
-
-# ---------------- USERS ----------------
-users = {
-    "admin": "1234",
-    "user": "1111"
-}
-
-# ---------------- DB INIT ----------------
+# ---------------- DATABASE ----------------
 def init_db():
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS books (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            author TEXT,
-            isbn TEXT,
-            publisher TEXT,
-            year TEXT,
-            edition TEXT,
-            category TEXT,
-            copies INTEGER,
-            shelf TEXT,
-            available INTEGER
-        )
+    # BOOKS
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS books (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        author TEXT,
+        isbn TEXT UNIQUE,
+        publisher TEXT,
+        year INTEGER,
+        edition TEXT,
+        category TEXT,
+        total_copies INTEGER,
+        available_copies INTEGER,
+        shelf_code TEXT
+    )
     """)
+
+    # USERS
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT
+    )
+    """)
+
+    # BORROW RECORDS
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS borrow_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user TEXT,
+        book_id INTEGER,
+        borrow_date TEXT,
+        due_date TEXT,
+        return_date TEXT,
+        fine INTEGER DEFAULT 0
+    )
+    """)
+
+    # default admin
+    cursor.execute("SELECT * FROM users WHERE username='admin'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+                       ("admin", "1234", "admin"))
 
     conn.commit()
     conn.close()
@@ -45,8 +69,15 @@ def login():
         u = request.form["username"]
         p = request.form["password"]
 
-        if u in users and users[u] == p:
+        conn = sqlite3.connect(DB_NAME)
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username=? AND password=?", (u, p))
+        user = cur.fetchone()
+        conn.close()
+
+        if user:
             session["user"] = u
+            session["role"] = user[3]
             return redirect("/")
 
         return "Invalid login"
@@ -54,52 +85,51 @@ def login():
     return render_template("login.html")
 
 
-# ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
-    session.pop("user", None)
+    session.clear()
     return redirect("/login")
 
 
 # ---------------- HOME + SEARCH ----------------
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
     if "user" not in session:
         return redirect("/login")
 
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
     search = request.args.get("search")
 
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
     if search:
-        c.execute("""
+        cur.execute("""
             SELECT * FROM books
             WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? OR category LIKE ?
         """, (f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"))
     else:
-        c.execute("SELECT * FROM books")
+        cur.execute("SELECT * FROM books")
 
-    books = c.fetchall()
+    books = cur.fetchall()
     conn.close()
 
-    return render_template("index.html", books=books)
+    return render_template("index.html", books=books, role=session["role"])
 
 
 # ---------------- ADD BOOK ----------------
 @app.route("/add", methods=["POST"])
 def add():
-    if session.get("user") != "admin":
-        return "Access Denied"
+    if session.get("role") != "admin":
+        return "Access denied"
 
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
 
-    copies = int(request.form["copies"])
-
-    c.execute("""
-        INSERT INTO books
-        (title, author, isbn, publisher, year, edition, category, copies, shelf, available)
+    cur.execute("""
+        INSERT INTO books (
+            title, author, isbn, publisher, year,
+            edition, category, total_copies, available_copies, shelf_code
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         request.form["title"],
@@ -109,10 +139,42 @@ def add():
         request.form["year"],
         request.form["edition"],
         request.form["category"],
-        copies,
-        request.form["shelf"],
-        copies
+        request.form["copies"],
+        request.form["copies"],
+        request.form["shelf"]
     ))
+
+    conn.commit()
+    conn.close()
+    return redirect("/")
+
+
+# ---------------- BORROW BOOK ----------------
+@app.route("/borrow/<int:book_id>")
+def borrow(book_id):
+    if "user" not in session:
+        return redirect("/login")
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT available_copies FROM books WHERE id=?", (book_id,))
+    book = cur.fetchone()
+
+    if book and book[0] > 0:
+        borrow_date = datetime.now()
+        due_date = borrow_date + timedelta(days=7)
+
+        cur.execute("""
+            INSERT INTO borrow_records (user, book_id, borrow_date, due_date)
+            VALUES (?, ?, ?, ?)
+        """, (session["user"], book_id, borrow_date, due_date))
+
+        cur.execute("""
+            UPDATE books
+            SET available_copies = available_copies - 1
+            WHERE id=?
+        """, (book_id,))
 
     conn.commit()
     conn.close()
@@ -120,8 +182,43 @@ def add():
     return redirect("/")
 
 
-# ---------------- START APP ----------------
+# ---------------- RETURN BOOK ----------------
+@app.route("/return/<int:record_id>")
+def return_book(record_id):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT book_id, due_date FROM borrow_records WHERE id=?", (record_id,))
+    data = cur.fetchone()
+
+    if data:
+        book_id, due_date = data
+        return_date = datetime.now()
+
+        fine = 0
+        if return_date > datetime.fromisoformat(due_date):
+            fine = 50  # simple fine rule
+
+        cur.execute("""
+            UPDATE borrow_records
+            SET return_date=?, fine=?
+            WHERE id=?
+        """, (return_date, fine, record_id))
+
+        cur.execute("""
+            UPDATE books
+            SET available_copies = available_copies + 1
+            WHERE id=?
+        """, (book_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/")
+
+
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     init_db()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
