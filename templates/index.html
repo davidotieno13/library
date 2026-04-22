@@ -11,71 +11,65 @@
     <span class="navbar-brand">📚 Library System</span>
 
     <div>
-        <a href="/dashboard" class="btn btn-primary me-2">Dashboard</a>
+        <a href="/dashboard" class="btn btn-primary">Dashboard</a>
+        <a href="/history" class="btn btn-warning">History</a>
         <a href="/logout" class="btn btn-danger">Logout</a>
     </div>
 </nav>
 
 <div class="container mt-4">
 
-    <!-- ADD BOOK -->
-    <div class="card p-3 mb-3">
-        <form method="POST" action="/add" class="row g-2">
+{% if role == "admin" %}
+<div class="card p-3 mb-3">
+<form method="POST" action="/add" class="row g-2">
 
-            <div class="col"><input name="title" class="form-control" placeholder="Title"></div>
-            <div class="col"><input name="author" class="form-control" placeholder="Author"></div>
-            <div class="col"><input name="isbn" class="form-control" placeholder="ISBN"></div>
-            <div class="col"><input name="category" class="form-control" placeholder="Category"></div>
-            <div class="col"><input name="copies" class="form-control" placeholder="Copies"></div>
+<input name="title" class="form-control col" placeholder="Title">
+<input name="author" class="form-control col" placeholder="Author">
+<input name="isbn" class="form-control col" placeholder="ISBN">
+<input name="category" class="form-control col" placeholder="Category">
+<input name="copies" class="form-control col" placeholder="Copies">
 
-            <div class="col">
-                <button class="btn btn-success w-100">Add</button>
-            </div>
+<button class="btn btn-success col">Add Book</button>
 
-        </form>
-    </div>
+</form>
+</div>
+{% endif %}
 
-    <!-- BOOK LIST -->
-    <div class="card p-3">
+<table class="table table-bordered">
+<thead class="table-dark">
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>ISBN</th>
+<th>Category</th>
+<th>Total</th>
+<th>Available</th>
+<th>Action</th>
+</tr>
+</thead>
 
-       <table class="table table-bordered mt-3">
-    <thead class="table-dark">
-        <tr>
-            <th>Title</th>
-            <th>Author</th>
-            <th>ISBN</th>
-            <th>Category</th>
-            <th>Total Copies</th>
-            <th>Available</th>
-            <th>Action</th>
-        </tr>
-    </thead>
+<tbody>
+{% for b in books %}
+<tr>
+<td>{{ b[1] }}</td>
+<td>{{ b[2] }}</td>
+<td>{{ b[3] }}</td>
+<td>{{ b[4] }}</td>
+<td>{{ b[5] }}</td>
+<td>{{ b[6] }}</td>
 
-    <tbody>
-        {% for b in books %}
-        <tr>
-            <td>{{ b[1] }}</td>
-            <td>{{ b[2] }}</td>
-            <td>{{ b[3] }}</td>
-            <td>{{ b[4] }}</td>
+<td>
+{% if b[6]|int > 0 %}
+<a href="/borrow/{{ b[0] }}" class="btn btn-warning btn-sm">Borrow</a>
+{% else %}
+<span class="text-danger">Out</span>
+{% endif %}
+</td>
 
-            <!-- FIXED -->
-            <td>{{ b[5] }}</td>
-            <td>{{ b[6] }}</td>
-
-            <td>
-                {% if b[6]|int > 0 %}
-                <a href="/borrow/{{ b[0] }}" class="btn btn-warning btn-sm">Borrow</a>
-                {% else %}
-                <span class="text-danger">Out of stock</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
+</tr>
+{% endfor %}
+</tbody>
 </table>
-
-    </div>
 
 </div>
 
