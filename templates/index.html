@@ -9,48 +9,58 @@
 
 <body class="bg-light">
 
-<!-- NAVBAR (THIS IS WHERE DASHBOARD BUTTON GOES SAFELY) -->
+<!-- NAVBAR -->
 <nav class="navbar navbar-dark bg-dark px-3">
     <span class="navbar-brand">📚 Library System</span>
 
     <div>
         <a href="/dashboard" class="btn btn-primary me-2">Dashboard</a>
+        <a href="/history" class="btn btn-warning me-2">History</a>
         <a href="/logout" class="btn btn-danger">Logout</a>
     </div>
 </nav>
 
 <div class="container mt-4">
 
-    <!-- ADD BOOK (ADMIN ONLY) -->
+    <!-- ADD BOOK -->
     {% if role == "admin" %}
     <div class="card p-3 mb-4">
         <h5>➕ Add New Book</h5>
 
         <form method="POST" action="/add" class="row g-2">
+
             <div class="col-md-3">
                 <input name="title" class="form-control" placeholder="Title" required>
             </div>
+
             <div class="col-md-3">
                 <input name="author" class="form-control" placeholder="Author" required>
             </div>
+
             <div class="col-md-2">
                 <input name="isbn" class="form-control" placeholder="ISBN" required>
             </div>
+
             <div class="col-md-2">
                 <input name="publisher" class="form-control" placeholder="Publisher">
             </div>
+
             <div class="col-md-2">
                 <input name="year" class="form-control" placeholder="Year">
             </div>
+
             <div class="col-md-2">
                 <input name="edition" class="form-control" placeholder="Edition">
             </div>
+
             <div class="col-md-2">
                 <input name="category" class="form-control" placeholder="Category">
             </div>
+
             <div class="col-md-2">
                 <input name="copies" class="form-control" placeholder="Copies" required>
             </div>
+
             <div class="col-md-2">
                 <input name="shelf" class="form-control" placeholder="Shelf Code">
             </div>
@@ -58,6 +68,7 @@
             <div class="col-md-2">
                 <button class="btn btn-success w-100">Add</button>
             </div>
+
         </form>
     </div>
     {% endif %}
@@ -70,7 +81,7 @@
         </div>
     </form>
 
-    <!-- BOOK TABLE -->
+    <!-- BOOK LIST -->
     <div class="card p-3">
         <h5>📖 Books List</h5>
 
@@ -81,7 +92,7 @@
                     <th>Author</th>
                     <th>ISBN</th>
                     <th>Category</th>
-                    <th>Available</th>
+                    <th>Available Copies</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -96,7 +107,11 @@
                     <td>{{ book[9] }}</td>
 
                     <td>
+                        {% if book[9] > 0 %}
                         <a href="/borrow/{{ book[0] }}" class="btn btn-sm btn-warning">Borrow</a>
+                        {% else %}
+                        <span class="text-danger">Out of stock</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
