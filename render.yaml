@@ -1,6 +1,6 @@
 services:
   - type: web
     name: library-app
-    env: python
-    buildCommand: ""
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
