@@ -60,7 +60,7 @@
                     <td>{{ b[6] }}</td>
 
                     <td>
-                        {% if b[6] > 0 %}
+                        {% if b[6]|int > 0 %}
                         <a href="/borrow/{{ b[0] }}" class="btn btn-warning btn-sm">Borrow</a>
                         {% else %}
                         <span class="text-danger">Out</span>
