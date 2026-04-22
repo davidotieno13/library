@@ -215,6 +215,35 @@ def return_book(record_id):
     conn.close()
 
     return redirect("/")
+# ---------------- DASHBOARD ----------------
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/login")
+
+    return render_template("dashboard.html")
+# ---------------- STATS API ----------------
+@app.route("/stats")
+def stats():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM books")
+    total_books = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM borrow_records WHERE return_date IS NULL")
+    borrowed = cur.fetchone()[0]
+
+    cur.execute("SELECT COALESCE(SUM(available_copies), 0) FROM books")
+    available = cur.fetchone()[0]
+
+    conn.close()
+
+    return {
+        "total_books": total_books,
+        "borrowed": borrowed,
+        "available": available
+    }
 
 
 # ---------------- RUN ----------------
