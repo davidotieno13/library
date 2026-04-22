@@ -38,39 +38,42 @@
     <!-- BOOK LIST -->
     <div class="card p-3">
 
-        <table class="table table-bordered">
-            <thead class="table-dark">
-                <tr>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>ISBN</th>
-                    <th>Category</th>
-                    <th>Available</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+       <table class="table table-bordered mt-3">
+    <thead class="table-dark">
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>ISBN</th>
+            <th>Category</th>
+            <th>Total Copies</th>
+            <th>Available</th>
+            <th>Action</th>
+        </tr>
+    </thead>
 
-            <tbody>
-                {% for b in books %}
-                <tr>
-                    <td>{{ b[1] }}</td>
-                    <td>{{ b[2] }}</td>
-                    <td>{{ b[3] }}</td>
-                    <td>{{ b[4] }}</td>
-                    <td>{{ b[6] }}</td>
+    <tbody>
+        {% for b in books %}
+        <tr>
+            <td>{{ b[1] }}</td>
+            <td>{{ b[2] }}</td>
+            <td>{{ b[3] }}</td>
+            <td>{{ b[4] }}</td>
 
-                    <td>
-                        {% if b[6]|int > 0 %}
-                        <a href="/borrow/{{ b[0] }}" class="btn btn-warning btn-sm">Borrow</a>
-                        {% else %}
-                        <span class="text-danger">Out</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+            <!-- FIXED -->
+            <td>{{ b[5] }}</td>
+            <td>{{ b[6] }}</td>
 
-        </table>
+            <td>
+                {% if b[6]|int > 0 %}
+                <a href="/borrow/{{ b[0] }}" class="btn btn-warning btn-sm">Borrow</a>
+                {% else %}
+                <span class="text-danger">Out of stock</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
     </div>
 
