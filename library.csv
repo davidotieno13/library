@@ -1,1 +1,4 @@
-title,author,subject,shelf,row,position,available
+title,author,subject,available
+Python Basics,Guido,Programming,5
+Statistics 101,Smith,Math,3
+Biology Intro,Darwin,Science,4
