@@ -25,11 +25,13 @@ def setup():
 
 # ================= ROUTES =================
 
+# Dashboard (MAIN PAGE)
 @app.route('/')
 def index():
     books = Book.query.all()
     return render_template("index.html", books=books)
 
+# Login
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
@@ -37,6 +39,7 @@ def login():
             return redirect('/')
     return render_template("login.html")
 
+# Add Book
 @app.route('/add', methods=['POST'])
 def add_book():
     book = Book(
@@ -49,21 +52,25 @@ def add_book():
     db.session.commit()
     return redirect('/')
 
+# Borrow Book
 @app.route('/borrow/<int:id>')
 def borrow(id):
     book = Book.query.get(id)
-    if book.available > 0:
+    if book and book.available > 0:
         book.available -= 1
         db.session.commit()
     return redirect('/')
 
+# Return Book
 @app.route('/return/<int:id>')
 def return_book(id):
     book = Book.query.get(id)
-    book.available += 1
-    db.session.commit()
+    if book:
+        book.available += 1
+        db.session.commit()
     return redirect('/')
 
+# Upload CSV
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
@@ -74,12 +81,14 @@ def upload():
             title=row['title'],
             author=row['author'],
             subject=row['subject'],
-            available=row['available']
+            available=int(row['available'])
         )
         db.session.add(book)
 
     db.session.commit()
     return redirect('/')
+
+# ================= RUN =================
 
 if __name__ == '__main__':
     app.run(debug=True)
